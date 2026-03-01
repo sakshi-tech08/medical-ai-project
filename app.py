@@ -19,10 +19,10 @@ st.set_page_config(
 )
 
 # --------------------------
-# Load Trained Model Files
+# Load Trained Model Files (FROM MODELS FOLDER)
 # --------------------------
-model = pickle.load(open("rf.pkl", "rb"))
-labels = pickle.load(open("labels.pkl", "rb"))
+model = pickle.load(open("models/rf.pkl", "rb"))
+labels = pickle.load(open("models/labels.pkl", "rb"))
 
 # --------------------------
 # Symptom Columns
@@ -75,19 +75,15 @@ if st.button("Predict Disease"):
         st.warning("Please select at least 1 symptom!")
     else:
 
-        # Prepare input
         input_data = [1 if symptom in selected_symptoms else 0 for symptom in symptom_columns]
         input_array = np.array([input_data])
 
-        # Get probabilities
         probs = model.predict_proba(input_array)[0]
 
-        # Top 3 Predictions
         top3_idx = probs.argsort()[-3:][::-1]
         top3_diseases = [labels[i] for i in top3_idx]
         top3_probs = probs[top3_idx] * 100
 
-        # Risk Level
         top_prob = top3_probs[0]
         if top_prob >= 80:
             risk = "High Risk 🔴"
@@ -96,18 +92,12 @@ if st.button("Predict Disease"):
         else:
             risk = "Low Risk 🟢"
 
-        # --------------------------
-        # Display Results
-        # --------------------------
         st.markdown("### 🩺 Prediction Results")
         for i in range(3):
             st.write(f"**{top3_diseases[i]}:** {top3_probs[i]:.2f}%")
 
         st.write(f"**Risk Level:** {risk}")
 
-        # --------------------------
-        # Save History
-        # --------------------------
         history_df = pd.read_csv(history_file)
 
         new_entry = {
@@ -123,9 +113,6 @@ if st.button("Predict Disease"):
         history_df = pd.concat([history_df, pd.DataFrame([new_entry])], ignore_index=True)
         history_df.to_csv(history_file, index=False)
 
-        # --------------------------
-        # Bar Chart
-        # --------------------------
         st.markdown("### 📊 Confidence Bar Chart")
         fig, ax = plt.subplots()
         ax.bar(top3_diseases, top3_probs)
@@ -133,9 +120,6 @@ if st.button("Predict Disease"):
         ax.set_ylim(0, 100)
         st.pyplot(fig)
 
-        # --------------------------
-        # Pie Chart
-        # --------------------------
         st.markdown("### 🥧 Top 3 Disease Probability Pie Chart")
         fig2, ax2 = plt.subplots()
         ax2.pie(top3_probs, labels=top3_diseases, autopct='%1.1f%%', startangle=140)
