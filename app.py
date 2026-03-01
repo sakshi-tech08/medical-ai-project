@@ -1,5 +1,5 @@
 # --------------------------
-# Smart Health Predictor 🚀 - Final Production Version
+# Smart Health Predictor 🚀 - Final Corrected Version
 # --------------------------
 import streamlit as st
 import pandas as pd
@@ -19,10 +19,17 @@ st.set_page_config(
 )
 
 # --------------------------
-# Load Trained Model Files (FROM MODELS FOLDER)
+# Load Model
 # --------------------------
-model = pickle.load(open("models/rf.pkl", "rb"))
-labels = pickle.load(open("models/labels.pkl", "rb"))
+model_file = "models/rf.pkl"
+labels_file = "models/labels.pkl"
+
+if os.path.exists(model_file) and os.path.exists(labels_file):
+    model = pickle.load(open(model_file, "rb"))
+    labels = pickle.load(open(labels_file, "rb"))
+else:
+    st.error("❌ Model files not found! Please upload rf.pkl and labels.pkl in 'models' folder.")
+    st.stop()
 
 # --------------------------
 # Symptom Columns
@@ -60,7 +67,7 @@ if not os.path.exists(history_file):
     pd.DataFrame(columns=["Username","Symptoms","Top1","Top2","Top3","Confidence","Risk"]).to_csv(history_file, index=False)
 
 # --------------------------
-# Main Title
+# App Title
 # --------------------------
 st.markdown("<h1 style='text-align:center;'>Smart Health Predictor 🚀</h1>", unsafe_allow_html=True)
 
@@ -75,15 +82,19 @@ if st.button("Predict Disease"):
         st.warning("Please select at least 1 symptom!")
     else:
 
+        # Input preparation
         input_data = [1 if symptom in selected_symptoms else 0 for symptom in symptom_columns]
         input_array = np.array([input_data])
 
-        probs = model.predict_proba(input_array)[0]
+        # Predict
+        probs = model.predict_proba(input_array)[0]  # 1D array
 
+        # Top 3
         top3_idx = probs.argsort()[-3:][::-1]
         top3_diseases = [labels[i] for i in top3_idx]
         top3_probs = probs[top3_idx] * 100
 
+        # Risk
         top_prob = top3_probs[0]
         if top_prob >= 80:
             risk = "High Risk 🔴"
@@ -92,14 +103,14 @@ if st.button("Predict Disease"):
         else:
             risk = "Low Risk 🟢"
 
+        # Display Results
         st.markdown("### 🩺 Prediction Results")
         for i in range(3):
             st.write(f"**{top3_diseases[i]}:** {top3_probs[i]:.2f}%")
-
         st.write(f"**Risk Level:** {risk}")
 
+        # Save history
         history_df = pd.read_csv(history_file)
-
         new_entry = {
             "Username": username,
             "Symptoms": ",".join(selected_symptoms),
@@ -109,26 +120,26 @@ if st.button("Predict Disease"):
             "Confidence": top3_probs[0],
             "Risk": risk
         }
-
         history_df = pd.concat([history_df, pd.DataFrame([new_entry])], ignore_index=True)
         history_df.to_csv(history_file, index=False)
 
+        # Bar chart
         st.markdown("### 📊 Confidence Bar Chart")
         fig, ax = plt.subplots()
-        ax.bar(top3_diseases, top3_probs)
+        ax.bar(top3_diseases, top3_probs, color=['#FF4C4C','#FFA500','#4CAF50'])
         ax.set_ylabel("Confidence %")
         ax.set_ylim(0, 100)
         st.pyplot(fig)
 
+        # Pie chart
         st.markdown("### 🥧 Top 3 Disease Probability Pie Chart")
         fig2, ax2 = plt.subplots()
-        ax2.pie(top3_probs, labels=top3_diseases, autopct='%1.1f%%', startangle=140)
+        ax2.pie(top3_probs, labels=top3_diseases, autopct='%1.1f%%', startangle=140,
+                colors=['#FF4C4C','#FFA500','#4CAF50'])
         ax2.set_title("Top 3 Disease Probabilities")
         st.pyplot(fig2)
 
-# --------------------------
 # Footer
-# --------------------------
 st.markdown("---")
 st.markdown(
 """
